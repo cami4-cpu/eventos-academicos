@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel del organizador</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 1000px; margin: 20px auto; padding: 0 12px; }
+    form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-bottom: 20px; }
+    form input, form select, form textarea, form button { padding: 6px; }
+    form textarea, form button { grid-column: 1 / -1; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 14px; }
+    td button { margin-right: 4px; }
+    #mensaje { margin: 10px 0; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Panel del organizador</h1>
+  <p><a href="/">Ver catálogo público</a></p>
+
+  <h2>Crear evento</h2>
+  <form id="formEvento">
+    <input id="titulo" placeholder="Título" required>
+    <select id="categoria" required><option value="">Categoría</option></select>
+    <select id="modalidad" required>
+      <option value="PRESENCIAL">Presencial</option>
+      <option value="VIRTUAL">Virtual</option>
+      <option value="HIBRIDA">Híbrida</option>
+    </select>
+    <input id="fecha" type="date" required>
+    <input id="horaInicio" type="time" required>
+    <input id="horaFin" type="time" required>
+    <input id="ubicacion" placeholder="Ubicación o enlace">
+    <input id="cupo" type="number" min="1" placeholder="Cupo" required>
+    <textarea id="descripcion" placeholder="Descripción"></textarea>
+    <button type="submit">Crear evento</button>
+  </form>
+
+  <div id="mensaje"></div>
+
+  <h2>Mis eventos</h2>
+  <table>
+    <thead>
+      <tr><th>Título</th><th>Fecha</th><th>Modalidad</th><th>Cupo</th><th>Estado</th><th>Acciones</th></tr>
+    </thead>
+    <tbody id="filas"></tbody>
+  </table>
+
+  <script>
+    const ID_ORGANIZADOR = 1;
+    const mensaje = document.getElementById('mensaje');
+    const filas = document.getElementById('filas');
+
+    function mostrar(texto, esError) {
+      mensaje.textContent = texto;
+      mensaje.style.color = esError ? 'crimson' : 'green';
+    }
+
+    async function cargarCategorias() {
+      const res = await fetch('/api/categorias');
+      const categorias = await res.json();
+      const select = document.getElementById('categoria');
+      categorias.forEach(c => {
+        const op = document.createElement('option');
+        op.value = c.id;
+        op.textContent = c.nombre;
+        select.appendChild(op);
+      });
+    }
+
+    function boton(texto, accion) {
+      const b = document.createElement('button');
+      b.textContent = texto;
+      b.addEventListener('click', accion);
+      return b;
+    }
+
+    async function cambiarEstado(id, estado) {
+      const res = await fetch('/api/eventos/' + id + '/estado?estado=' + estado, { method: 'PATCH' });
+      if (!res.ok) { mostrar('No se pudo cambiar el estado.', true); return; }
+      mostrar('Estado actualizado a ' + estado + '.', false);
+      cargarEventos();
+    }
+
+    async function eliminar(id) {
+      if (!confirm('¿Eliminar este evento?')) return;
+      const res = await fetch('/api/eventos/' + id, { method: 'DELETE' });
+      if (!res.ok) { mostrar('No se pudo eliminar el evento.', true); return; }
+      mostrar('Evento eliminado.', false);
+      cargarEventos();
+    }
+
+    async function cargarEventos() {
+      const res = await fetch('/api/eventos');
+      const eventos = await res.json();
+      filas.replaceChildren();
+      eventos.forEach(e => {
+        const tr = document.createElement('tr');
+        [e.titulo, e.fecha, e.modalidad, e.cupo, e.estado].forEach(valor => {
+          const td = document.createElement('td');
+          td.textContent = valor;
+          tr.appendChild(td);
+        });
+        const acciones = document.createElement('td');
+        acciones.append(
+          boton('Publicar', () => cambiarEstado(e.id, 'PUBLICADO')),
+          boton('Cancelar', () => cambiarEstado(e.id, 'CANCELADO')),
+          boton('Eliminar', () => eliminar(e.id))
+        );
+        tr.appendChild(acciones);
+        filas.appendChild(tr);
+      });
+    }
+
+    document.getElementById('formEvento').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const datos = {
+        titulo: document.getElementById('titulo').value,
+        descripcion: document.getElementById('descripcion').value,
+        fecha: document.getElementById('fecha').value,
+        horaInicio: document.getElementById('horaInicio').value,
+        horaFin: document.getElementById('horaFin').value,
+        modalidad: document.getElementById('modalidad').value,
+        ubicacion: document.getElementById('ubicacion').value,
+        cupo: parseInt(document.getElementById('cupo').value, 10),
+        idCategoria: parseInt(document.getElementById('categoria').value, 10),
+        idOrganizador: ID_ORGANIZADOR
+      };
+      const res = await fetch('/api/eventos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos)
+      });
+      if (!res.ok) { mostrar('No se pudo crear el evento. Revisa los datos.', true); return; }
+      mostrar('Evento creado como borrador. Pulsa Publicar para que salga en el catálogo.', false);
+      ev.target.reset();
+      cargarEventos();
+    });
+
+    cargarCategorias();
+    cargarEventos();
+  </script>
+</body>
+</html>
