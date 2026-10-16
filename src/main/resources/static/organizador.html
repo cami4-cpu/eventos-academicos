@@ -16,6 +16,7 @@
   </style>
 </head>
 <body>
+		<button id="btnSalir" type="button">Cerrar sesión</button>
   <h1>Panel del organizador</h1>
   <p><a href="/">Ver catálogo público</a></p>
 
@@ -48,6 +49,10 @@
   </table>
 
   <script>
+	document.getElementById('btnSalir').addEventListener('click', async () => {
+	  await fetch('/api/auth/logout', { method: 'POST' });
+	  window.location.href = '/login.html';
+	});
     const ID_ORGANIZADOR = 1;
     const mensaje = document.getElementById('mensaje');
     const filas = document.getElementById('filas');

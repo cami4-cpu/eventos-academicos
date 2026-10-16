@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crear cuenta</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 360px; margin: 60px auto; padding: 0 12px; }
+    form { display: grid; gap: 10px; }
+    input, button { padding: 8px; }
+    #mensaje { margin-top: 10px; }
+    .error { color: crimson; }
+    .ok { color: green; }
+  </style>
+</head>
+<body>
+  <h1>Crear cuenta</h1>
+  <form id="formRegistro">
+    <input id="nombre" type="text" placeholder="Nombre completo" required>
+    <input id="email" type="email" placeholder="Correo" required>
+    <input id="password" type="password" placeholder="Contraseña (mínimo 8 caracteres)" minlength="8" required>
+    <button type="submit">Registrarme</button>
+  </form>
+  <div id="mensaje"></div>
+  <p>¿Ya tienes cuenta? <a href="/login.html">Iniciar sesión</a></p>
+  <p><a href="/">Volver al catálogo</a></p>
+
+  <script>
+    document.getElementById('formRegistro').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const mensaje = document.getElementById('mensaje');
+      const res = await fetch('/api/auth/registro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: document.getElementById('nombre').value,
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value
+        })
+      });
+      if (res.ok) {
+        mensaje.className = 'ok';
+        mensaje.textContent = 'Cuenta creada. Redirigiendo al inicio de sesión...';
+        setTimeout(() => window.location.href = '/login.html', 1500);
+      } else if (res.status === 409) {
+        mensaje.className = 'error';
+        mensaje.textContent = 'Ese correo ya está registrado.';
+      } else {
+        mensaje.className = 'error';
+        mensaje.textContent = 'No se pudo crear la cuenta. Revisa los datos.';
+      }
+    });
+  </script>
+</body>
+</html>
