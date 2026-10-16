@@ -1,17 +1,18 @@
 package co.edu.uniajc.eventos.service;
-import co.edu.uniajc.eventos.entity.EstadoEvento;
-import java.time.LocalDate;
-import co.edu.uniajc.eventos.entity.Modalidad;
 
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import co.edu.uniajc.eventos.dto.EventoRequest;
 import co.edu.uniajc.eventos.dto.EventoResponse;
 import co.edu.uniajc.eventos.entity.CategoriaEvento;
+import co.edu.uniajc.eventos.entity.EstadoEvento;
 import co.edu.uniajc.eventos.entity.Evento;
+import co.edu.uniajc.eventos.entity.Modalidad;
 import co.edu.uniajc.eventos.entity.Usuario;
 import co.edu.uniajc.eventos.repository.CategoriaEventoRepository;
 import co.edu.uniajc.eventos.repository.EventoRepository;
@@ -43,66 +44,42 @@ public class EventoService {
     }
 
     @Transactional
-    public EventoResponse crear(EventoRequest r) {
-        if (!r.horaFin().isAfter(r.horaInicio())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La hora de fin debe ser posterior a la de inicio");
-        }
-        CategoriaEvento categoria = categoriaRepository.findById(r.idCategoria())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría no existe"));
-        Usuario organizador = usuarioRepository.findById(r.idOrganizador())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organizador no existe"));
+    public EventoResponse crear(EventoRequest r, Authentication auth) {
+        validarHoras(r);
+        CategoriaEvento categoria = buscarCategoria(r.idCategoria());
+        Usuario organizador = usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no válido"));
 
         Evento e = new Evento();
-        e.setTitulo(r.titulo());
-        e.setDescripcion(r.descripcion());
-        e.setFecha(r.fecha());
-        e.setHoraInicio(r.horaInicio());
-        e.setHoraFin(r.horaFin());
-        e.setModalidad(r.modalidad());
-        e.setUbicacion(r.ubicacion());
-        e.setCupo(r.cupo());
-        e.setCategoria(categoria);
-        e.setOrganizador(organizador);
-        return aRespuesta(eventoRepository.save(e));
-    }
-    @Transactional
-    public EventoResponse actualizar(Long id, EventoRequest r) {
-        if (!r.horaFin().isAfter(r.horaInicio())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La hora de fin debe ser posterior a la de inicio");
-        }
-        Evento e = buscar(id);
-        CategoriaEvento categoria = categoriaRepository.findById(r.idCategoria())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría no existe"));
-        Usuario organizador = usuarioRepository.findById(r.idOrganizador())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organizador no existe"));
-
-        e.setTitulo(r.titulo());
-        e.setDescripcion(r.descripcion());
-        e.setFecha(r.fecha());
-        e.setHoraInicio(r.horaInicio());
-        e.setHoraFin(r.horaFin());
-        e.setModalidad(r.modalidad());
-        e.setUbicacion(r.ubicacion());
-        e.setCupo(r.cupo());
-        e.setCategoria(categoria);
+        copiarDatos(e, r, categoria);
         e.setOrganizador(organizador);
         return aRespuesta(eventoRepository.save(e));
     }
 
     @Transactional
-    public EventoResponse cambiarEstado(Long id, EstadoEvento nuevoEstado) {
+    public EventoResponse actualizar(Long id, EventoRequest r, Authentication auth) {
+        validarHoras(r);
         Evento e = buscar(id);
+        verificarPropietario(e, auth);
+        copiarDatos(e, r, buscarCategoria(r.idCategoria()));
+        return aRespuesta(eventoRepository.save(e));
+    }
+
+    @Transactional
+    public EventoResponse cambiarEstado(Long id, EstadoEvento nuevoEstado, Authentication auth) {
+        Evento e = buscar(id);
+        verificarPropietario(e, auth);
         e.setEstado(nuevoEstado);
         return aRespuesta(eventoRepository.save(e));
     }
 
     @Transactional
-    public void eliminar(Long id) {
+    public void eliminar(Long id, Authentication auth) {
         Evento e = buscar(id);
+        verificarPropietario(e, auth);
         eventoRepository.delete(e);
     }
+
     @Transactional(readOnly = true)
     public List<EventoResponse> catalogo(Long idCategoria, Modalidad modalidad, LocalDate fecha, String q) {
         return eventoRepository.findByEstadoOrderByFechaAsc(EstadoEvento.PUBLICADO).stream()
@@ -114,6 +91,40 @@ public class EventoService {
                 .map(this::aRespuesta)
                 .toList();
     }
+
+    private void validarHoras(EventoRequest r) {
+        if (!r.horaFin().isAfter(r.horaInicio())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La hora de fin debe ser posterior a la de inicio");
+        }
+    }
+
+    private CategoriaEvento buscarCategoria(Long id) {
+        return categoriaRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría no existe"));
+    }
+
+    private void copiarDatos(Evento e, EventoRequest r, CategoriaEvento categoria) {
+        e.setTitulo(r.titulo());
+        e.setDescripcion(r.descripcion());
+        e.setFecha(r.fecha());
+        e.setHoraInicio(r.horaInicio());
+        e.setHoraFin(r.horaFin());
+        e.setModalidad(r.modalidad());
+        e.setUbicacion(r.ubicacion());
+        e.setCupo(r.cupo());
+        e.setCategoria(categoria);
+    }
+
+    private void verificarPropietario(Evento e, Authentication auth) {
+        boolean esAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"));
+        if (!esAdmin && !e.getOrganizador().getEmail().equals(auth.getName())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "No puedes modificar eventos de otro organizador");
+        }
+    }
+
     private Evento buscar(Long id) {
         return eventoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Evento no encontrado"));

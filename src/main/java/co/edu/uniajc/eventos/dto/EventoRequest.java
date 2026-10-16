@@ -16,6 +16,5 @@ public record EventoRequest(
         @NotNull Modalidad modalidad,
         String ubicacion,
         @Min(1) int cupo,
-        @NotNull Long idCategoria,
-        @NotNull Long idOrganizador) {
+        @NotNull Long idCategoria) {
 }

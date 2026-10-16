@@ -1,11 +1,12 @@
 package co.edu.uniajc.eventos.controller;
-import co.edu.uniajc.eventos.entity.EstadoEvento;
 
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import co.edu.uniajc.eventos.dto.EventoRequest;
 import co.edu.uniajc.eventos.dto.EventoResponse;
+import co.edu.uniajc.eventos.entity.EstadoEvento;
 import co.edu.uniajc.eventos.service.EventoService;
 import jakarta.validation.Valid;
 
@@ -31,22 +32,27 @@ public class EventoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public EventoResponse crear(@Valid @RequestBody EventoRequest request) {
-        return service.crear(request);
+    public EventoResponse crear(@Valid @RequestBody EventoRequest request, Authentication auth) {
+        return service.crear(request, auth);
     }
+
     @PutMapping("/{id}")
-    public EventoResponse actualizar(@PathVariable Long id, @Valid @RequestBody EventoRequest request) {
-        return service.actualizar(id, request);
+    public EventoResponse actualizar(@PathVariable Long id,
+                                     @Valid @RequestBody EventoRequest request,
+                                     Authentication auth) {
+        return service.actualizar(id, request, auth);
     }
 
     @PatchMapping("/{id}/estado")
-    public EventoResponse cambiarEstado(@PathVariable Long id, @RequestParam EstadoEvento estado) {
-        return service.cambiarEstado(id, estado);
+    public EventoResponse cambiarEstado(@PathVariable Long id,
+                                        @RequestParam EstadoEvento estado,
+                                        Authentication auth) {
+        return service.cambiarEstado(id, estado, auth);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void eliminar(@PathVariable Long id) {
-        service.eliminar(id);
+    public void eliminar(@PathVariable Long id, Authentication auth) {
+        service.eliminar(id, auth);
     }
 }
