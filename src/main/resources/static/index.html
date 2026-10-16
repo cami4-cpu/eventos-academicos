@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eventos académicos</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 0 12px; }
+    .filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .filtros input, .filtros select, .filtros button { padding: 6px; }
+    .evento { border: 1px solid #ccc; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
+    .evento h3 { margin: 0 0 6px; }
+    .meta { color: #555; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Catálogo de eventos</h1>
+
+  <div class="filtros">
+    <input id="q" placeholder="Buscar por título">
+    <select id="categoria"><option value="">Todas las categorías</option></select>
+    <select id="modalidad">
+      <option value="">Todas las modalidades</option>
+      <option value="PRESENCIAL">Presencial</option>
+      <option value="VIRTUAL">Virtual</option>
+      <option value="HIBRIDA">Híbrida</option>
+    </select>
+    <input id="fecha" type="date">
+    <button id="buscar">Buscar</button>
+    <button id="limpiar">Limpiar</button>
+  </div>
+
+  <div id="lista"></div>
+
+  <script>
+    const lista = document.getElementById('lista');
+
+    async function cargarCategorias() {
+      const res = await fetch('/api/categorias');
+      const categorias = await res.json();
+      const select = document.getElementById('categoria');
+      categorias.forEach(c => {
+        const op = document.createElement('option');
+        op.value = c.id;
+        op.textContent = c.nombre;
+        select.appendChild(op);
+      });
+    }
+
+    async function cargarEventos() {
+      const params = new URLSearchParams();
+      const q = document.getElementById('q').value.trim();
+      const categoria = document.getElementById('categoria').value;
+      const modalidad = document.getElementById('modalidad').value;
+      const fecha = document.getElementById('fecha').value;
+      if (q) params.append('q', q);
+      if (categoria) params.append('categoria', categoria);
+      if (modalidad) params.append('modalidad', modalidad);
+      if (fecha) params.append('fecha', fecha);
+
+      const res = await fetch('/api/catalogo?' + params.toString());
+      const eventos = await res.json();
+      lista.replaceChildren();
+
+      if (eventos.length === 0) {
+        lista.textContent = 'No hay eventos que coincidan con la búsqueda.';
+        return;
+      }
+      eventos.forEach(e => {
+        const div = document.createElement('div');
+        div.className = 'evento';
+
+        const titulo = document.createElement('h3');
+        titulo.textContent = e.titulo;
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = e.fecha + ' · ' + e.horaInicio.slice(0, 5) + ' - ' + e.horaFin.slice(0, 5)
+          + ' · ' + e.modalidad + ' · ' + e.ubicacion + ' · ' + e.categoria + ' · Cupo: ' + e.cupo;
+
+        const desc = document.createElement('p');
+        desc.textContent = e.descripcion || '';
+
+        div.append(titulo, meta, desc);
+        lista.appendChild(div);
+      });
+    }
+
+    document.getElementById('buscar').addEventListener('click', cargarEventos);
+    document.getElementById('limpiar').addEventListener('click', () => {
+      document.querySelectorAll('.filtros input, .filtros select').forEach(el => el.value = '');
+      cargarEventos();
+    });
+
+    cargarCategorias();
+    cargarEventos();
+  </script>
+</body>
+</html>
