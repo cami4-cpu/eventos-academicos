@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import co.edu.uniajc.eventos.dto.IndicadoresResponse;
 import co.edu.uniajc.eventos.dto.InscritoResponse;
 import co.edu.uniajc.eventos.entity.EstadoAsistencia;
 import co.edu.uniajc.eventos.entity.EstadoInscripcion;
@@ -20,11 +21,14 @@ public class InscritoService {
 
     private final EventoRepository eventoRepository;
     private final InscripcionRepository inscripcionRepository;
+    private final AuditoriaService auditoria;
 
     public InscritoService(EventoRepository eventoRepository,
-                           InscripcionRepository inscripcionRepository) {
+                           InscripcionRepository inscripcionRepository,
+                           AuditoriaService auditoria) {
         this.eventoRepository = eventoRepository;
         this.inscripcionRepository = inscripcionRepository;
+        this.auditoria = auditoria;
     }
 
     @Transactional(readOnly = true)
@@ -34,6 +38,26 @@ public class InscritoService {
         return inscripcionRepository.findByEventoIdOrderByFechaInscripcionAsc(idEvento).stream()
                 .map(this::aRespuesta)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public IndicadoresResponse indicadores(Long idEvento, Authentication auth) {
+        Evento evento = buscarEvento(idEvento);
+        verificarPropietario(evento, auth);
+
+        long cupo = evento.getCupo();
+        long activos = inscripcionRepository.countByEventoIdAndEstado(idEvento, EstadoInscripcion.ACTIVA);
+        long asistieron = inscripcionRepository.countByEventoIdAndEstadoAndAsistencia(
+                idEvento, EstadoInscripcion.ACTIVA, EstadoAsistencia.ASISTIO);
+        long noAsistieron = inscripcionRepository.countByEventoIdAndEstadoAndAsistencia(
+                idEvento, EstadoInscripcion.ACTIVA, EstadoAsistencia.NO_ASISTIO);
+        long pendientes = activos - asistieron - noAsistieron;
+        long libres = Math.max(cupo - activos, 0);
+        double asistencia = activos == 0 ? 0 : Math.round(asistieron * 1000.0 / activos) / 10.0;
+        double ocupacion = cupo == 0 ? 0 : Math.round(activos * 1000.0 / cupo) / 10.0;
+
+        return new IndicadoresResponse(cupo, activos, libres, ocupacion,
+                asistieron, noAsistieron, pendientes, asistencia);
     }
 
     @Transactional
@@ -55,7 +79,10 @@ public class InscritoService {
                     "La inscripción está cancelada");
         }
         i.setAsistencia(valor);
-        return aRespuesta(inscripcionRepository.save(i));
+        Inscripcion guardada = inscripcionRepository.save(i);
+        auditoria.registrar(auth.getName(), "ASISTENCIA_REGISTRADA", "INSCRIPCION",
+                idInscripcion, "Evento " + idEvento + ": " + valor);
+        return aRespuesta(guardada);
     }
 
     private Evento buscarEvento(Long idEvento) {
@@ -68,6 +95,8 @@ public class InscritoService {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"));
         boolean esDueno = evento.getOrganizador().getEmail().equalsIgnoreCase(auth.getName());
         if (!esAdmin && !esDueno) {
+            auditoria.registrar(auth.getName(), "ACCESO_NO_AUTORIZADO", "EVENTO",
+                    evento.getId(), "Intentó operar sobre un evento ajeno");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Este evento no es tuyo");
         }
     }

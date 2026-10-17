@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Historial de operaciones</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 1000px; margin: 20px auto; padding: 0 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 14px; }
+    #mensaje { margin: 10px 0; font-weight: bold; color: crimson; }
+  </style>
+</head>
+<body>
+  <h1>Historial de operaciones</h1>
+  <p><a href="/organizador.html">Volver al panel</a></p>
+  <div id="mensaje"></div>
+  <table>
+    <thead>
+      <tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Detalle</th></tr>
+    </thead>
+    <tbody id="filas"></tbody>
+  </table>
+
+  <script>
+    async function cargar() {
+      const res = await fetch('/api/auditoria');
+      if (!res.ok) {
+        document.getElementById('mensaje').textContent =
+          'No tienes permiso para ver el historial (solo el administrador).';
+        return;
+      }
+      const registros = await res.json();
+      const filas = document.getElementById('filas');
+      filas.replaceChildren();
+      registros.forEach(r => {
+        const tr = document.createElement('tr');
+        [r.fecha.replace('T', ' ').slice(0, 19), r.usuario, r.accion, r.entidad, r.idEntidad, r.detalle].forEach(v => {
+          const td = document.createElement('td');
+          td.textContent = v == null ? '' : v;
+          tr.appendChild(td);
+        });
+        filas.appendChild(tr);
+      });
+    }
+    cargar();
+  </script>
+</body>
+</html>

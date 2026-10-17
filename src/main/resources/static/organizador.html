@@ -19,6 +19,7 @@
   <button id="btnSalir" type="button">Cerrar sesión</button>
   <h1>Panel del organizador</h1>
   <p><a href="/">Ver catálogo público</a></p>
+    <p><a href="/historial.html">Ver historial de operaciones (solo administrador)</a></p>
 
   <h2>Crear evento</h2>
   <form id="formEvento">
@@ -88,6 +89,23 @@
       encabezado.textContent = 'Inscritos en "' + titulo + '" (' + activos + ' activos, '
         + asistieron + ' asistieron)';
       zona.appendChild(encabezado);
+
+      const resInd = await fetch('/api/eventos/' + id + '/inscritos/indicadores');
+      if (resInd.ok) {
+        const ind = await resInd.json();
+        const caja = document.createElement('p');
+        caja.style.background = '#f2f6fc';
+        caja.style.padding = '8px';
+        caja.textContent = 'Cupo: ' + ind.cupo
+          + ' | Inscritos activos: ' + ind.inscritosActivos
+          + ' | Cupos libres: ' + ind.cuposLibres
+          + ' | Ocupación: ' + ind.porcentajeOcupacion + '%'
+          + ' | Asistieron: ' + ind.asistieron
+          + ' | No asistieron: ' + ind.noAsistieron
+          + ' | Pendientes: ' + ind.pendientes
+          + ' | Asistencia: ' + ind.porcentajeAsistencia + '%';
+        zona.appendChild(caja);
+      }
 
       if (inscritos.length === 0) {
         zona.appendChild(document.createTextNode('Todavía no hay inscritos.'));
@@ -212,4 +230,5 @@
     cargarEventos();
   </script>
 </body>
+</html>
 </html>
