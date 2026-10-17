@@ -67,4 +67,15 @@ public class Inscripcion {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoInscripcion estado = EstadoInscripcion.ACTIVA;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private EstadoAsistencia asistencia = EstadoAsistencia.PENDIENTE;
+
+    public EstadoAsistencia getAsistencia() {
+        return asistencia == null ? EstadoAsistencia.PENDIENTE : asistencia;
+    }
+
+    public void setAsistencia(EstadoAsistencia asistencia) {
+        this.asistencia = asistencia;
+    }
 }

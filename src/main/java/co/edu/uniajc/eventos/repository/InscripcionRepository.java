@@ -16,4 +16,5 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Long> 
 
     List<Inscripcion> findByUsuarioIdOrderByFechaInscripcionDesc(Long idUsuario);
     List<Inscripcion> findByEventoIdOrderByFechaInscripcionAsc(Long idEvento);
+    
 }

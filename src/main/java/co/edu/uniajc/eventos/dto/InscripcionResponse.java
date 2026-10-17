@@ -6,7 +6,7 @@ import java.time.LocalTime;
 import co.edu.uniajc.eventos.entity.EstadoInscripcion;
 
 public record InscripcionResponse(
-        Long id,
+        Long idInscripcion,
         Long idEvento,
         String titulo,
         LocalDate fecha,
