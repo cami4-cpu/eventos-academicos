@@ -16,7 +16,7 @@
   </style>
 </head>
 <body>
-		<button id="btnSalir" type="button">Cerrar sesión</button>
+  <button id="btnSalir" type="button">Cerrar sesión</button>
   <h1>Panel del organizador</h1>
   <p><a href="/">Ver catálogo público</a></p>
 
@@ -47,12 +47,9 @@
     </thead>
     <tbody id="filas"></tbody>
   </table>
+  <div id="inscritos"></div>
 
   <script>
-	document.getElementById('btnSalir').addEventListener('click', async () => {
-	  await fetch('/api/auth/logout', { method: 'POST' });
-	  window.location.href = '/login.html';
-	});
     const ID_ORGANIZADOR = 1;
     const mensaje = document.getElementById('mensaje');
     const filas = document.getElementById('filas');
@@ -61,6 +58,47 @@
       mensaje.textContent = texto;
       mensaje.style.color = esError ? 'crimson' : 'green';
     }
+
+    async function verInscritos(id, titulo) {
+      const zona = document.getElementById('inscritos');
+      zona.replaceChildren();
+      const res = await fetch('/api/eventos/' + id + '/inscritos');
+      if (!res.ok) { mostrar('No tienes permiso para ver los inscritos de ese evento.', true); return; }
+      const inscritos = await res.json();
+
+      const encabezado = document.createElement('h2');
+      const activos = inscritos.filter(i => i.estado === 'ACTIVA').length;
+      encabezado.textContent = 'Inscritos en "' + titulo + '" (' + activos + ' activos)';
+      zona.appendChild(encabezado);
+
+      if (inscritos.length === 0) {
+        zona.appendChild(document.createTextNode('Todavía no hay inscritos.'));
+        return;
+      }
+      const tabla = document.createElement('table');
+      const cabecera = document.createElement('tr');
+      ['Nombre', 'Correo', 'Estado', 'Fecha de inscripción'].forEach(t => {
+        const th = document.createElement('th');
+        th.textContent = t;
+        cabecera.appendChild(th);
+      });
+      tabla.appendChild(cabecera);
+      inscritos.forEach(i => {
+        const tr = document.createElement('tr');
+        [i.nombre, i.email, i.estado, i.fechaInscripcion.replace('T', ' ').slice(0, 16)].forEach(v => {
+          const td = document.createElement('td');
+          td.textContent = v;
+          tr.appendChild(td);
+        });
+        tabla.appendChild(tr);
+      });
+      zona.appendChild(tabla);
+    }
+
+    document.getElementById('btnSalir').addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
 
     async function cargarCategorias() {
       const res = await fetch('/api/categorias');
@@ -111,6 +149,7 @@
         acciones.append(
           boton('Publicar', () => cambiarEstado(e.id, 'PUBLICADO')),
           boton('Cancelar', () => cambiarEstado(e.id, 'CANCELADO')),
+          boton('Ver inscritos', () => verInscritos(e.id, e.titulo)),
           boton('Eliminar', () => eliminar(e.id))
         );
         tr.appendChild(acciones);

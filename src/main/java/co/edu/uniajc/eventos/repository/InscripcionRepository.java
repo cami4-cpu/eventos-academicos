@@ -15,4 +15,5 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Long> 
     boolean existsByEventoIdAndUsuarioIdAndEstado(Long idEvento, Long idUsuario, EstadoInscripcion estado);
 
     List<Inscripcion> findByUsuarioIdOrderByFechaInscripcionDesc(Long idUsuario);
+    List<Inscripcion> findByEventoIdOrderByFechaInscripcionAsc(Long idEvento);
 }
