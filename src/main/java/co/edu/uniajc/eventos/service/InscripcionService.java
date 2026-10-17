@@ -17,6 +17,7 @@ import co.edu.uniajc.eventos.entity.Usuario;
 import co.edu.uniajc.eventos.repository.EventoRepository;
 import co.edu.uniajc.eventos.repository.InscripcionRepository;
 import co.edu.uniajc.eventos.repository.UsuarioRepository;
+import java.time.LocalTime;
 
 @Service
 public class InscripcionService {

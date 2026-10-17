@@ -1,6 +1,7 @@
 package co.edu.uniajc.eventos.dto;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import co.edu.uniajc.eventos.entity.EstadoEvento;
 import co.edu.uniajc.eventos.entity.Modalidad;
@@ -17,5 +18,8 @@ public record EventoResponse(
         int cupo,
         EstadoEvento estado,
         String categoria,
-        String organizador) {
+        String organizador,
+        String motivoCancelacion,
+        LocalDateTime fechaCancelacion,
+        String canceladoPor) {
 }

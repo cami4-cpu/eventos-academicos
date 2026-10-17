@@ -1,6 +1,7 @@
 package co.edu.uniajc.eventos.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -29,15 +30,18 @@ public class EventoService {
     private final CategoriaEventoRepository categoriaRepository;
     private final UsuarioRepository usuarioRepository;
     private final InscripcionRepository inscripcionRepository;
+    private final AuditoriaService auditoria;
 
     public EventoService(EventoRepository eventoRepository,
                          CategoriaEventoRepository categoriaRepository,
                          UsuarioRepository usuarioRepository,
-                         InscripcionRepository inscripcionRepository) {
+                         InscripcionRepository inscripcionRepository,
+                         AuditoriaService auditoria) {
         this.eventoRepository = eventoRepository;
         this.categoriaRepository = categoriaRepository;
         this.usuarioRepository = usuarioRepository;
         this.inscripcionRepository = inscripcionRepository;
+        this.auditoria = auditoria;
     }
 
     @Transactional(readOnly = true)
@@ -60,7 +64,9 @@ public class EventoService {
         Evento e = new Evento();
         copiarDatos(e, r, categoria);
         e.setOrganizador(organizador);
-        return aRespuesta(eventoRepository.save(e));
+        Evento guardado = eventoRepository.save(e);
+        auditoria.registrar(auth.getName(), "EVENTO_CREADO", "EVENTO", guardado.getId(), guardado.getTitulo());
+        return aRespuesta(guardado);
     }
 
     @Transactional
@@ -68,23 +74,82 @@ public class EventoService {
         validarHoras(r);
         Evento e = buscar(id);
         verificarPropietario(e, auth);
+        if (e.getEstado() == EstadoEvento.CANCELADO || e.getEstado() == EstadoEvento.FINALIZADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Un evento cancelado o finalizado no se puede modificar");
+        }
+        long activos = inscripcionRepository.countByEventoIdAndEstado(id, EstadoInscripcion.ACTIVA);
+        if (r.cupo() < activos) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El cupo no puede ser menor que los inscritos activos (" + activos + ")");
+        }
         copiarDatos(e, r, buscarCategoria(r.idCategoria()));
-        return aRespuesta(eventoRepository.save(e));
+        Evento guardado = eventoRepository.save(e);
+        auditoria.registrar(auth.getName(), "EVENTO_EDITADO", "EVENTO", id, guardado.getTitulo());
+        return aRespuesta(guardado);
     }
 
     @Transactional
     public EventoResponse cambiarEstado(Long id, EstadoEvento nuevoEstado, Authentication auth) {
         Evento e = buscar(id);
         verificarPropietario(e, auth);
+
+        if (nuevoEstado == EstadoEvento.CANCELADO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Para cancelar un evento debes indicar el motivo");
+        }
+        EstadoEvento actual = e.getEstado();
+        if (nuevoEstado == EstadoEvento.FINALIZADO && e.getFecha().isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El evento solo se puede finalizar desde el día en que se realiza");
+        }
+        boolean permitido = switch (nuevoEstado) {
+            case PUBLICADO -> actual == EstadoEvento.BORRADOR || actual == EstadoEvento.CERRADO;
+            case CERRADO -> actual == EstadoEvento.PUBLICADO;
+            case FINALIZADO -> actual == EstadoEvento.PUBLICADO || actual == EstadoEvento.CERRADO;
+            default -> false;
+        };
+        if (!permitido) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede pasar el evento de " + actual + " a " + nuevoEstado);
+        }
         e.setEstado(nuevoEstado);
-        return aRespuesta(eventoRepository.save(e));
+        Evento guardado = eventoRepository.save(e);
+        auditoria.registrar(auth.getName(), "EVENTO_" + nuevoEstado.name(), "EVENTO", id,
+                "De " + actual + " a " + nuevoEstado);
+        return aRespuesta(guardado);
+    }
+
+    @Transactional
+    public EventoResponse cancelar(Long id, String motivo, Authentication auth) {
+        Evento e = buscar(id);
+        verificarPropietario(e, auth);
+        if (e.getEstado() == EstadoEvento.CANCELADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El evento ya está cancelado");
+        }
+        if (e.getEstado() == EstadoEvento.FINALIZADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un evento finalizado no se puede cancelar");
+        }
+        e.setEstado(EstadoEvento.CANCELADO);
+        e.setMotivoCancelacion(motivo.trim());
+        e.setFechaCancelacion(LocalDateTime.now());
+        e.setCanceladoPor(auth.getName());
+        Evento guardado = eventoRepository.save(e);
+        auditoria.registrar(auth.getName(), "EVENTO_CANCELADO", "EVENTO", id, "Motivo: " + motivo.trim());
+        return aRespuesta(guardado);
     }
 
     @Transactional
     public void eliminar(Long id, Authentication auth) {
         Evento e = buscar(id);
         verificarPropietario(e, auth);
+        if (inscripcionRepository.countByEventoId(id) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El evento tiene inscripciones y no se puede eliminar; cancélalo para conservar el historial");
+        }
+        String titulo = e.getTitulo();
         eventoRepository.delete(e);
+        auditoria.registrar(auth.getName(), "EVENTO_ELIMINADO", "EVENTO", id, titulo);
     }
 
     @Transactional(readOnly = true)
@@ -145,7 +210,9 @@ public class EventoService {
     private void verificarPropietario(Evento e, Authentication auth) {
         boolean esAdmin = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"));
-        if (!esAdmin && !e.getOrganizador().getEmail().equals(auth.getName())) {
+        if (!esAdmin && !e.getOrganizador().getEmail().equalsIgnoreCase(auth.getName())) {
+            auditoria.registrar(auth.getName(), "ACCESO_NO_AUTORIZADO", "EVENTO", e.getId(),
+                    "Intentó modificar un evento ajeno");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "No puedes modificar eventos de otro organizador");
         }
@@ -159,6 +226,7 @@ public class EventoService {
     private EventoResponse aRespuesta(Evento e) {
         return new EventoResponse(e.getId(), e.getTitulo(), e.getDescripcion(), e.getFecha(),
                 e.getHoraInicio(), e.getHoraFin(), e.getModalidad(), e.getUbicacion(), e.getCupo(),
-                e.getEstado(), e.getCategoria().getNombre(), e.getOrganizador().getNombre());
+                e.getEstado(), e.getCategoria().getNombre(), e.getOrganizador().getNombre(),
+                e.getMotivoCancelacion(), e.getFechaCancelacion(), e.getCanceladoPor());
     }
 }

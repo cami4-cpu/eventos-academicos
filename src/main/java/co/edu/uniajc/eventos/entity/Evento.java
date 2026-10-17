@@ -149,4 +149,20 @@ public class Evento {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_organizador")
     private Usuario organizador;
+    @Column(name = "motivo_cancelacion", length = 500)
+    private String motivoCancelacion;
+
+    @Column(name = "fecha_cancelacion")
+    private java.time.LocalDateTime fechaCancelacion;
+
+    @Column(name = "cancelado_por", length = 150)
+    private String canceladoPor;
+
+    public String getMotivoCancelacion() { return motivoCancelacion; }
+    public void setMotivoCancelacion(String motivoCancelacion) { this.motivoCancelacion = motivoCancelacion; }
+    public java.time.LocalDateTime getFechaCancelacion() { return fechaCancelacion; }
+    public void setFechaCancelacion(java.time.LocalDateTime fechaCancelacion) { this.fechaCancelacion = fechaCancelacion; }
+    public String getCanceladoPor() { return canceladoPor; }
+    public void setCanceladoPor(String canceladoPor) { this.canceladoPor = canceladoPor; }
+    
 }

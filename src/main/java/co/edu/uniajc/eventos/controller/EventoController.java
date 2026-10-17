@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import co.edu.uniajc.eventos.dto.CancelarEventoRequest;
 import co.edu.uniajc.eventos.dto.EventoRequest;
 import co.edu.uniajc.eventos.dto.EventoResponse;
 import co.edu.uniajc.eventos.entity.EstadoEvento;
@@ -48,6 +49,13 @@ public class EventoController {
                                         @RequestParam EstadoEvento estado,
                                         Authentication auth) {
         return service.cambiarEstado(id, estado, auth);
+    }
+
+    @PatchMapping("/{id}/cancelar")
+    public EventoResponse cancelar(@PathVariable Long id,
+                                   @Valid @RequestBody CancelarEventoRequest request,
+                                   Authentication auth) {
+        return service.cancelar(id, request.motivo(), auth);
     }
 
     @DeleteMapping("/{id}")
