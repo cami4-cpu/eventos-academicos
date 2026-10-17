@@ -34,4 +34,8 @@ public class UsuarioDetailsService implements UserDetailsService {
                 .authorities(permisos)
                 .build();
     }
+
+	public UsuarioRepository getUsuarioRepository() {
+		return usuarioRepository;
+	}
 }

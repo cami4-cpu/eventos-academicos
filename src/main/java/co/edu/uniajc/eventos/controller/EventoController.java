@@ -55,4 +55,8 @@ public class EventoController {
     public void eliminar(@PathVariable Long id, Authentication auth) {
         service.eliminar(id, auth);
     }
+
+	public EventoService getService() {
+		return service;
+	}
 }

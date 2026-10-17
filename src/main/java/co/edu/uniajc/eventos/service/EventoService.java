@@ -125,7 +125,19 @@ public class EventoService {
         }
     }
 
-    private Evento buscar(Long id) {
+    public EventoRepository getEventoRepository() {
+		return eventoRepository;
+	}
+
+	public CategoriaEventoRepository getCategoriaRepository() {
+		return categoriaRepository;
+	}
+
+	public UsuarioRepository getUsuarioRepository() {
+		return usuarioRepository;
+	}
+
+	private Evento buscar(Long id) {
         return eventoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Evento no encontrado"));
     }

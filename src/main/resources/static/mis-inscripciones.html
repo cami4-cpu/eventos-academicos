@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mis inscripciones</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 0 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 14px; }
+    #mensaje { margin: 10px 0; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Mis inscripciones</h1>
+  <p><a href="/">Volver al catálogo</a></p>
+  <div id="mensaje"></div>
+
+  <table>
+    <thead>
+      <tr><th>Evento</th><th>Fecha</th><th>Hora</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr>
+    </thead>
+    <tbody id="filas"></tbody>
+  </table>
+
+  <script>
+    const filas = document.getElementById('filas');
+    const mensaje = document.getElementById('mensaje');
+
+    function mostrar(texto, esError) {
+      mensaje.textContent = texto;
+      mensaje.style.color = esError ? 'crimson' : 'green';
+    }
+
+    async function cancelar(idEvento) {
+      if (!confirm('¿Cancelar esta inscripción?')) return;
+      const res = await fetch('/api/inscripciones/' + idEvento, { method: 'DELETE' });
+      if (!res.ok) { mostrar('No se pudo cancelar la inscripción.', true); return; }
+      mostrar('Inscripción cancelada.', false);
+      cargar();
+    }
+
+    async function cargar() {
+      const res = await fetch('/api/inscripciones/mias');
+      const tipo = res.headers.get('content-type') || '';
+      if (!res.ok || !tipo.includes('json')) {
+        window.location.href = '/login.html';
+        return;
+      }
+      const inscripciones = await res.json();
+      filas.replaceChildren();
+      if (inscripciones.length === 0) {
+        mostrar('Todavía no tienes inscripciones.', false);
+        return;
+      }
+      inscripciones.forEach(i => {
+        const tr = document.createElement('tr');
+        [i.titulo, i.fecha, i.horaInicio.slice(0, 5), i.ubicacion, i.estado].forEach(valor => {
+          const td = document.createElement('td');
+          td.textContent = valor;
+          tr.appendChild(td);
+        });
+        const acciones = document.createElement('td');
+        if (i.estado === 'ACTIVA') {
+          const boton = document.createElement('button');
+          boton.textContent = 'Cancelar';
+          boton.addEventListener('click', () => cancelar(i.idEvento));
+          acciones.appendChild(boton);
+        }
+        tr.appendChild(acciones);
+        filas.appendChild(tr);
+      });
+    }
+
+    cargar();
+  </script>
+</body>
+</html>

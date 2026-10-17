@@ -6,14 +6,17 @@
   <title>Eventos académicos</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 0 12px; }
+    .barra { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end; margin-bottom: 10px; }
     .filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
     .filtros input, .filtros select, .filtros button { padding: 6px; }
     .evento { border: 1px solid #ccc; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
     .evento h3 { margin: 0 0 6px; }
     .meta { color: #555; font-size: 14px; }
+    #mensaje { margin: 10px 0; font-weight: bold; }
   </style>
 </head>
 <body>
+  <div class="barra" id="barra"></div>
   <h1>Catálogo de eventos</h1>
 
   <div class="filtros">
@@ -30,10 +33,58 @@
     <button id="limpiar">Limpiar</button>
   </div>
 
+  <div id="mensaje"></div>
   <div id="lista"></div>
 
   <script>
     const lista = document.getElementById('lista');
+    const barra = document.getElementById('barra');
+    const mensaje = document.getElementById('mensaje');
+    let sesion = null;
+
+    function mostrar(texto, esError) {
+      mensaje.textContent = texto;
+      mensaje.style.color = esError ? 'crimson' : 'green';
+    }
+
+    function enlace(texto, href) {
+      const a = document.createElement('a');
+      a.textContent = texto;
+      a.href = href;
+      return a;
+    }
+
+    async function cargarSesion() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const tipo = res.headers.get('content-type') || '';
+        if (res.ok && tipo.includes('json')) sesion = await res.json();
+      } catch (e) {
+        sesion = null;
+      }
+      pintarBarra();
+    }
+
+    function pintarBarra() {
+      barra.replaceChildren();
+      if (!sesion) {
+        barra.append(enlace('Iniciar sesión', '/login.html'), enlace('Crear cuenta', '/registro.html'));
+        return;
+      }
+      const quien = document.createElement('span');
+      quien.textContent = sesion.email;
+      barra.append(quien, enlace('Mis inscripciones', '/mis-inscripciones.html'));
+      if (sesion.roles.includes('ROLE_ORGANIZADOR') || sesion.roles.includes('ROLE_ADMINISTRADOR')) {
+        barra.append(enlace('Panel del organizador', '/organizador.html'));
+      }
+      const salir = document.createElement('button');
+      salir.textContent = 'Cerrar sesión';
+      salir.addEventListener('click', async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/';
+      });
+      barra.appendChild(salir);
+    }
 
     async function cargarCategorias() {
       const res = await fetch('/api/categorias');
@@ -45,6 +96,20 @@
         op.textContent = c.nombre;
         select.appendChild(op);
       });
+    }
+
+    async function inscribir(id) {
+      const res = await fetch('/api/inscripciones/' + id, { method: 'POST' });
+      if (res.status === 201) {
+        mostrar('Inscripción confirmada. La ves en "Mis inscripciones".', false);
+        return;
+      }
+      let texto = 'No se pudo completar la inscripción.';
+      try {
+        const datos = await res.json();
+        if (datos.message) texto = datos.message;
+      } catch (e) { }
+      mostrar(texto, true);
     }
 
     async function cargarEventos() {
@@ -82,6 +147,15 @@
         desc.textContent = e.descripcion || '';
 
         div.append(titulo, meta, desc);
+
+        if (sesion) {
+          const boton = document.createElement('button');
+          boton.textContent = 'Inscribirme';
+          boton.addEventListener('click', () => inscribir(e.id));
+          div.appendChild(boton);
+        } else {
+          div.appendChild(enlace('Inicia sesión para inscribirte', '/login.html'));
+        }
         lista.appendChild(div);
       });
     }
@@ -92,8 +166,12 @@
       cargarEventos();
     });
 
-    cargarCategorias();
-    cargarEventos();
+    async function iniciar() {
+      await cargarSesion();
+      await cargarCategorias();
+      await cargarEventos();
+    }
+    iniciar();
   </script>
 </body>
 </html>

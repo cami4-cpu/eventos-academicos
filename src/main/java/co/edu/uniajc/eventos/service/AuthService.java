@@ -45,4 +45,16 @@ public class AuthService {
         Usuario guardado = usuarioRepository.save(u);
         return new UsuarioResponse(guardado.getId(), guardado.getNombre(), guardado.getEmail());
     }
+
+	public UsuarioRepository getUsuarioRepository() {
+		return usuarioRepository;
+	}
+
+	public RolRepository getRolRepository() {
+		return rolRepository;
+	}
+
+	public PasswordEncoder getPasswordEncoder() {
+		return passwordEncoder;
+	}
 }
