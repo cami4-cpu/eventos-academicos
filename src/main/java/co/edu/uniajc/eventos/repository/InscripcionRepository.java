@@ -12,5 +12,7 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Long> 
 
     long countByEventoIdAndEstado(Long idEvento, EstadoInscripcion estado);
 
+    boolean existsByEventoIdAndUsuarioIdAndEstado(Long idEvento, Long idUsuario, EstadoInscripcion estado);
+
     List<Inscripcion> findByUsuarioIdOrderByFechaInscripcionDesc(Long idUsuario);
 }

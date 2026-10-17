@@ -12,6 +12,8 @@
     .evento { border: 1px solid #ccc; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
     .evento h3 { margin: 0 0 6px; }
     .meta { color: #555; font-size: 14px; }
+    .lleno { color: crimson; font-weight: bold; }
+    .ok { color: green; font-weight: bold; }
     #mensaje { margin: 10px 0; font-weight: bold; }
   </style>
 </head>
@@ -98,18 +100,47 @@
       });
     }
 
-    async function inscribir(id) {
-      const res = await fetch('/api/inscripciones/' + id, { method: 'POST' });
-      if (res.status === 201) {
-        mostrar('Inscripción confirmada. La ves en "Mis inscripciones".', false);
-        return;
-      }
-      let texto = 'No se pudo completar la inscripción.';
+    async function inscribir(id, boton) {
+      boton.disabled = true;
       try {
-        const datos = await res.json();
-        if (datos.message) texto = datos.message;
-      } catch (e) { }
-      mostrar(texto, true);
+        const res = await fetch('/api/inscripciones/' + id, { method: 'POST' });
+        if (res.redirected) {
+          sesion = null;
+          pintarBarra();
+          mostrar('Tu sesión expiró. Inicia sesión de nuevo.', true);
+        } else if (res.status === 201) {
+          mostrar('Inscripción confirmada. La ves en "Mis inscripciones".', false);
+        } else {
+          let texto = 'No se pudo completar la inscripción.';
+          try {
+            const datos = await res.json();
+            if (datos.message) texto = datos.message;
+          } catch (e) { }
+          mostrar(texto, true);
+        }
+      } catch (e) {
+        mostrar('No se pudo conectar con el servidor.', true);
+      }
+      // Siempre se vuelve a pedir la lista, para ver los cupos y el estado al día.
+      await cargarEventos();
+    }
+
+    function accionEvento(e) {
+      if (!sesion) {
+        return enlace('Inicia sesión para inscribirte', '/login.html');
+      }
+      const boton = document.createElement('button');
+      if (e.inscrito) {
+        boton.textContent = 'Ya estás inscrito';
+        boton.disabled = true;
+      } else if (e.cuposDisponibles <= 0) {
+        boton.textContent = 'Cupo lleno';
+        boton.disabled = true;
+      } else {
+        boton.textContent = 'Inscribirme';
+        boton.addEventListener('click', () => inscribir(e.id, boton));
+      }
+      return boton;
     }
 
     async function cargarEventos() {
@@ -141,21 +172,16 @@
         const meta = document.createElement('div');
         meta.className = 'meta';
         meta.textContent = e.fecha + ' · ' + e.horaInicio.slice(0, 5) + ' - ' + e.horaFin.slice(0, 5)
-          + ' · ' + e.modalidad + ' · ' + e.ubicacion + ' · ' + e.categoria + ' · Cupo: ' + e.cupo;
+          + ' · ' + e.modalidad + ' · ' + e.ubicacion + ' · ' + e.categoria;
+
+        const cupos = document.createElement('div');
+        cupos.className = e.cuposDisponibles <= 0 ? 'lleno' : 'ok';
+        cupos.textContent = 'Cupos disponibles: ' + e.cuposDisponibles + ' de ' + e.cupo;
 
         const desc = document.createElement('p');
         desc.textContent = e.descripcion || '';
 
-        div.append(titulo, meta, desc);
-
-        if (sesion) {
-          const boton = document.createElement('button');
-          boton.textContent = 'Inscribirme';
-          boton.addEventListener('click', () => inscribir(e.id));
-          div.appendChild(boton);
-        } else {
-          div.appendChild(enlace('Inicia sesión para inscribirte', '/login.html'));
-        }
+        div.append(titulo, meta, cupos, desc, accionEvento(e));
         lista.appendChild(div);
       });
     }

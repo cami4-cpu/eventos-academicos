@@ -30,7 +30,7 @@
       cuerpo.append('password', document.getElementById('password').value);
       const res = await fetch('/api/auth/login', { method: 'POST', body: cuerpo });
       if (res.ok) {
-        window.location.href = '/organizador.html';
+        		window.location.href = '/';
       } else {
         document.getElementById('mensaje').textContent = 'Correo o contraseña incorrectos.';
       }

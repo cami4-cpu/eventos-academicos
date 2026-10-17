@@ -3,19 +3,23 @@ package co.edu.uniajc.eventos.service;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import co.edu.uniajc.eventos.dto.EventoCatalogoResponse;
 import co.edu.uniajc.eventos.dto.EventoRequest;
 import co.edu.uniajc.eventos.dto.EventoResponse;
 import co.edu.uniajc.eventos.entity.CategoriaEvento;
 import co.edu.uniajc.eventos.entity.EstadoEvento;
+import co.edu.uniajc.eventos.entity.EstadoInscripcion;
 import co.edu.uniajc.eventos.entity.Evento;
 import co.edu.uniajc.eventos.entity.Modalidad;
 import co.edu.uniajc.eventos.entity.Usuario;
 import co.edu.uniajc.eventos.repository.CategoriaEventoRepository;
 import co.edu.uniajc.eventos.repository.EventoRepository;
+import co.edu.uniajc.eventos.repository.InscripcionRepository;
 import co.edu.uniajc.eventos.repository.UsuarioRepository;
 
 @Service
@@ -24,13 +28,16 @@ public class EventoService {
     private final EventoRepository eventoRepository;
     private final CategoriaEventoRepository categoriaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final InscripcionRepository inscripcionRepository;
 
     public EventoService(EventoRepository eventoRepository,
                          CategoriaEventoRepository categoriaRepository,
-                         UsuarioRepository usuarioRepository) {
+                         UsuarioRepository usuarioRepository,
+                         InscripcionRepository inscripcionRepository) {
         this.eventoRepository = eventoRepository;
         this.categoriaRepository = categoriaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.inscripcionRepository = inscripcionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -81,15 +88,34 @@ public class EventoService {
     }
 
     @Transactional(readOnly = true)
-    public List<EventoResponse> catalogo(Long idCategoria, Modalidad modalidad, LocalDate fecha, String q) {
+    public List<EventoCatalogoResponse> catalogo(Long idCategoria, Modalidad modalidad,
+                                                 LocalDate fecha, String q, Authentication auth) {
+        Long idUsuario = idUsuarioActual(auth);
         return eventoRepository.findByEstadoOrderByFechaAsc(EstadoEvento.PUBLICADO).stream()
                 .filter(e -> idCategoria == null || e.getCategoria().getId().equals(idCategoria))
                 .filter(e -> modalidad == null || e.getModalidad() == modalidad)
                 .filter(e -> fecha == null || e.getFecha().equals(fecha))
                 .filter(e -> q == null || q.isBlank()
                         || e.getTitulo().toLowerCase().contains(q.toLowerCase()))
-                .map(this::aRespuesta)
+                .map(e -> aCatalogo(e, idUsuario))
                 .toList();
+    }
+
+    private Long idUsuarioActual(Authentication auth) {
+        if (auth == null || auth instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+        return usuarioRepository.findByEmail(auth.getName()).map(Usuario::getId).orElse(null);
+    }
+
+    private EventoCatalogoResponse aCatalogo(Evento e, Long idUsuario) {
+        long ocupados = inscripcionRepository.countByEventoIdAndEstado(e.getId(), EstadoInscripcion.ACTIVA);
+        int disponibles = (int) Math.max(0, e.getCupo() - ocupados);
+        boolean inscrito = idUsuario != null && inscripcionRepository
+                .existsByEventoIdAndUsuarioIdAndEstado(e.getId(), idUsuario, EstadoInscripcion.ACTIVA);
+        return new EventoCatalogoResponse(e.getId(), e.getTitulo(), e.getDescripcion(), e.getFecha(),
+                e.getHoraInicio(), e.getHoraFin(), e.getModalidad(), e.getUbicacion(), e.getCupo(),
+                disponibles, inscrito, e.getCategoria().getNombre(), e.getOrganizador().getNombre());
     }
 
     private void validarHoras(EventoRequest r) {
@@ -125,19 +151,7 @@ public class EventoService {
         }
     }
 
-    public EventoRepository getEventoRepository() {
-		return eventoRepository;
-	}
-
-	public CategoriaEventoRepository getCategoriaRepository() {
-		return categoriaRepository;
-	}
-
-	public UsuarioRepository getUsuarioRepository() {
-		return usuarioRepository;
-	}
-
-	private Evento buscar(Long id) {
+    private Evento buscar(Long id) {
         return eventoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Evento no encontrado"));
     }
