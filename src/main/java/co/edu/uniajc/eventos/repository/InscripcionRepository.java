@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import co.edu.uniajc.eventos.entity.EstadoInscripcion;
 import co.edu.uniajc.eventos.entity.Inscripcion;
-
+import co.edu.uniajc.eventos.entity.EstadoAsistencia;
 public interface InscripcionRepository extends JpaRepository<Inscripcion, Long> {
 
     Optional<Inscripcion> findByEventoIdAndUsuarioId(Long idEvento, Long idUsuario);
@@ -16,5 +16,5 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Long> 
 
     List<Inscripcion> findByUsuarioIdOrderByFechaInscripcionDesc(Long idUsuario);
     List<Inscripcion> findByEventoIdOrderByFechaInscripcionAsc(Long idEvento);
-    
+    long countByEventoIdAndEstadoAndAsistencia(Long idEvento, EstadoInscripcion estado, EstadoAsistencia asistencia);
 }

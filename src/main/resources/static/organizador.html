@@ -59,6 +59,22 @@
       mensaje.style.color = esError ? 'crimson' : 'green';
     }
 
+    async function marcarAsistencia(idEvento, titulo, idInscripcion, valor) {
+      const res = await fetch('/api/eventos/' + idEvento + '/inscritos/' + idInscripcion
+        + '/asistencia?valor=' + valor, { method: 'PATCH' });
+      if (!res.ok) {
+        let texto = 'No se pudo registrar la asistencia.';
+        try {
+          const d = await res.json();
+          if (d.message) texto = d.message;
+        } catch (e) { }
+        mostrar(texto, true);
+        return;
+      }
+      mostrar('Asistencia registrada.', false);
+      verInscritos(idEvento, titulo);
+    }
+
     async function verInscritos(id, titulo) {
       const zona = document.getElementById('inscritos');
       zona.replaceChildren();
@@ -68,7 +84,9 @@
 
       const encabezado = document.createElement('h2');
       const activos = inscritos.filter(i => i.estado === 'ACTIVA').length;
-      encabezado.textContent = 'Inscritos en "' + titulo + '" (' + activos + ' activos)';
+      const asistieron = inscritos.filter(i => i.asistencia === 'ASISTIO').length;
+      encabezado.textContent = 'Inscritos en "' + titulo + '" (' + activos + ' activos, '
+        + asistieron + ' asistieron)';
       zona.appendChild(encabezado);
 
       if (inscritos.length === 0) {
@@ -77,7 +95,7 @@
       }
       const tabla = document.createElement('table');
       const cabecera = document.createElement('tr');
-      ['Nombre', 'Correo', 'Estado', 'Fecha de inscripción'].forEach(t => {
+      ['Nombre', 'Correo', 'Estado', 'Asistencia', 'Fecha de inscripción', 'Registrar'].forEach(t => {
         const th = document.createElement('th');
         th.textContent = t;
         cabecera.appendChild(th);
@@ -85,11 +103,19 @@
       tabla.appendChild(cabecera);
       inscritos.forEach(i => {
         const tr = document.createElement('tr');
-        [i.nombre, i.email, i.estado, i.fechaInscripcion.replace('T', ' ').slice(0, 16)].forEach(v => {
+        [i.nombre, i.email, i.estado, i.asistencia, i.fechaInscripcion.replace('T', ' ').slice(0, 16)].forEach(v => {
           const td = document.createElement('td');
           td.textContent = v;
           tr.appendChild(td);
         });
+        const acciones = document.createElement('td');
+        if (i.estado === 'ACTIVA') {
+          acciones.append(
+            boton('Asistió', () => marcarAsistencia(id, titulo, i.idInscripcion, 'ASISTIO')),
+            boton('No asistió', () => marcarAsistencia(id, titulo, i.idInscripcion, 'NO_ASISTIO'))
+          );
+        }
+        tr.appendChild(acciones);
         tabla.appendChild(tr);
       });
       zona.appendChild(tabla);
