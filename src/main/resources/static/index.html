@@ -3,201 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Eventos académicos</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 0 12px; }
-    .barra { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end; margin-bottom: 10px; }
-    .filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-    .filtros input, .filtros select, .filtros button { padding: 6px; }
-    .evento { border: 1px solid #ccc; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
-    .evento h3 { margin: 0 0 6px; }
-    .meta { color: #555; font-size: 14px; }
-    .lleno { color: crimson; font-weight: bold; }
-    .ok { color: green; font-weight: bold; }
-    #mensaje { margin: 10px 0; font-weight: bold; }
-  </style>
+  <meta name="description" content="Consulta los eventos académicos publicados, filtra por categoría, modalidad o fecha e inscríbete.">
+  <title>Catálogo de eventos · Eventos académicos UNIAJC</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%93%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <div class="barra" id="barra"></div>
-  <h1>Catálogo de eventos</h1>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
 
-  <div class="filtros">
-    <input id="q" placeholder="Buscar por título">
-    <select id="categoria"><option value="">Todas las categorías</option></select>
-    <select id="modalidad">
-      <option value="">Todas las modalidades</option>
-      <option value="PRESENCIAL">Presencial</option>
-      <option value="VIRTUAL">Virtual</option>
-      <option value="HIBRIDA">Híbrida</option>
-    </select>
-    <input id="fecha" type="date">
-    <button id="buscar">Buscar</button>
-    <button id="limpiar">Limpiar</button>
-  </div>
+  <header class="topbar">
+    <div class="topbar-in">
+      <a class="marca" href="/">
+        <span class="marca-icono" aria-hidden="true">🎓</span>
+        <span>Eventos académicos</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Navegación principal"></nav>
+    </div>
+  </header>
 
-  <div id="mensaje"></div>
-  <div id="lista"></div>
+  <main class="contenedor" id="contenido">
+    <h1>Catálogo de eventos</h1>
+    <p class="subtitulo">Encuentra un evento, revisa los cupos disponibles e inscríbete.</p>
 
-  <script>
-    const lista = document.getElementById('lista');
-    const barra = document.getElementById('barra');
-    const mensaje = document.getElementById('mensaje');
-    let sesion = null;
+    <form id="formFiltros" class="filtros" role="search" aria-label="Filtrar eventos">
+      <div class="campo">
+        <label for="q">Buscar por título</label>
+        <input id="q" name="q" type="search" placeholder="Ej.: Spring Boot" autocomplete="off">
+      </div>
+      <div class="campo">
+        <label for="categoria">Categoría</label>
+        <select id="categoria" name="categoria">
+          <option value="">Todas las categorías</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="modalidad">Modalidad</label>
+        <select id="modalidad" name="modalidad">
+          <option value="">Todas las modalidades</option>
+          <option value="PRESENCIAL">Presencial</option>
+          <option value="VIRTUAL">Virtual</option>
+          <option value="HIBRIDA">Híbrida</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="fecha">Fecha</label>
+        <input id="fecha" name="fecha" type="date">
+      </div>
+      <div class="botones">
+        <button type="submit" class="btn">Buscar</button>
+        <button type="button" id="limpiar" class="btn secundario">Limpiar</button>
+      </div>
+    </form>
 
-    function mostrar(texto, esError) {
-      mensaje.textContent = texto;
-      mensaje.style.color = esError ? 'crimson' : 'green';
-    }
+    <div id="mensaje" class="mensaje" role="status" aria-live="polite"></div>
 
-    function enlace(texto, href) {
-      const a = document.createElement('a');
-      a.textContent = texto;
-      a.href = href;
-      return a;
-    }
+    <section id="lista" class="rejilla" aria-label="Eventos disponibles" aria-live="polite"></section>
+  </main>
 
-    async function cargarSesion() {
-      try {
-        const res = await fetch('/api/auth/me');
-        const tipo = res.headers.get('content-type') || '';
-        if (res.ok && tipo.includes('json')) sesion = await res.json();
-      } catch (e) {
-        sesion = null;
-      }
-      pintarBarra();
-    }
+  <footer class="pie">
+    <p>Proyecto de Fundamentos Web · UNIAJC</p>
+  </footer>
 
-    function pintarBarra() {
-      barra.replaceChildren();
-      if (!sesion) {
-        barra.append(enlace('Iniciar sesión', '/login.html'), enlace('Crear cuenta', '/registro.html'));
-        return;
-      }
-      const quien = document.createElement('span');
-      quien.textContent = sesion.email;
-      barra.append(quien, enlace('Mis inscripciones', '/mis-inscripciones.html'));
-      if (sesion.roles.includes('ROLE_ORGANIZADOR') || sesion.roles.includes('ROLE_ADMINISTRADOR')) {
-        barra.append(enlace('Panel del organizador', '/organizador.html'));
-      }
-      const salir = document.createElement('button');
-      salir.textContent = 'Cerrar sesión';
-      salir.addEventListener('click', async () => {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        window.location.href = '/';
-      });
-      barra.appendChild(salir);
-    }
-
-    async function cargarCategorias() {
-      const res = await fetch('/api/categorias');
-      const categorias = await res.json();
-      const select = document.getElementById('categoria');
-      categorias.forEach(c => {
-        const op = document.createElement('option');
-        op.value = c.id;
-        op.textContent = c.nombre;
-        select.appendChild(op);
-      });
-    }
-
-    async function inscribir(id, boton) {
-      boton.disabled = true;
-      try {
-        const res = await fetch('/api/inscripciones/' + id, { method: 'POST' });
-        if (res.redirected) {
-          sesion = null;
-          pintarBarra();
-          mostrar('Tu sesión expiró. Inicia sesión de nuevo.', true);
-        } else if (res.status === 201) {
-          mostrar('Inscripción confirmada. La ves en "Mis inscripciones".', false);
-        } else {
-          let texto = 'No se pudo completar la inscripción.';
-          try {
-            const datos = await res.json();
-            if (datos.message) texto = datos.message;
-          } catch (e) { }
-          mostrar(texto, true);
-        }
-      } catch (e) {
-        mostrar('No se pudo conectar con el servidor.', true);
-      }
-      // Siempre se vuelve a pedir la lista, para ver los cupos y el estado al día.
-      await cargarEventos();
-    }
-
-    function accionEvento(e) {
-      if (!sesion) {
-        return enlace('Inicia sesión para inscribirte', '/login.html');
-      }
-      const boton = document.createElement('button');
-      if (e.inscrito) {
-        boton.textContent = 'Ya estás inscrito';
-        boton.disabled = true;
-      } else if (e.cuposDisponibles <= 0) {
-        boton.textContent = 'Cupo lleno';
-        boton.disabled = true;
-      } else {
-        boton.textContent = 'Inscribirme';
-        boton.addEventListener('click', () => inscribir(e.id, boton));
-      }
-      return boton;
-    }
-
-    async function cargarEventos() {
-      const params = new URLSearchParams();
-      const q = document.getElementById('q').value.trim();
-      const categoria = document.getElementById('categoria').value;
-      const modalidad = document.getElementById('modalidad').value;
-      const fecha = document.getElementById('fecha').value;
-      if (q) params.append('q', q);
-      if (categoria) params.append('categoria', categoria);
-      if (modalidad) params.append('modalidad', modalidad);
-      if (fecha) params.append('fecha', fecha);
-
-      const res = await fetch('/api/catalogo?' + params.toString());
-      const eventos = await res.json();
-      lista.replaceChildren();
-
-      if (eventos.length === 0) {
-        lista.textContent = 'No hay eventos que coincidan con la búsqueda.';
-        return;
-      }
-      eventos.forEach(e => {
-        const div = document.createElement('div');
-        div.className = 'evento';
-
-        const titulo = document.createElement('h3');
-        titulo.textContent = e.titulo;
-
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        meta.textContent = e.fecha + ' · ' + e.horaInicio.slice(0, 5) + ' - ' + e.horaFin.slice(0, 5)
-          + ' · ' + e.modalidad + ' · ' + e.ubicacion + ' · ' + e.categoria;
-
-        const cupos = document.createElement('div');
-        cupos.className = e.cuposDisponibles <= 0 ? 'lleno' : 'ok';
-        cupos.textContent = 'Cupos disponibles: ' + e.cuposDisponibles + ' de ' + e.cupo;
-
-        const desc = document.createElement('p');
-        desc.textContent = e.descripcion || '';
-
-        div.append(titulo, meta, cupos, desc, accionEvento(e));
-        lista.appendChild(div);
-      });
-    }
-
-    document.getElementById('buscar').addEventListener('click', cargarEventos);
-    document.getElementById('limpiar').addEventListener('click', () => {
-      document.querySelectorAll('.filtros input, .filtros select').forEach(el => el.value = '');
-      cargarEventos();
-    });
-
-    async function iniciar() {
-      await cargarSesion();
-      await cargarCategorias();
-      await cargarEventos();
-    }
-    iniciar();
-  </script>
+  <script src="/js/comun.js"></script>
+  <script src="/js/index.js"></script>
 </body>
 </html>

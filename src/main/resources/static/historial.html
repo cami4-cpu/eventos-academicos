@@ -3,168 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Historial de operaciones</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 1100px; margin: 20px auto; padding: 0 12px; }
-    .filtros { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 12px 0; }
-    .filtros label { display: flex; flex-direction: column; font-size: 13px; gap: 2px; }
-    .filtros input, .filtros select, .filtros button { padding: 6px; }
-    .tabla { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 14px; }
-    th { background: #f2f6fc; }
-    #mensaje { margin: 10px 0; font-weight: bold; color: crimson; }
-    #contador { margin: 8px 0; font-size: 14px; color: #444; }
-  </style>
+  <meta name="description" content="Registro de las operaciones relevantes del sistema. Solo para el administrador.">
+  <title>Historial de operaciones · Eventos académicos UNIAJC</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%93%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <h1>Historial de operaciones</h1>
-  <p><a href="/organizador.html">Volver al panel</a></p>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
 
-  <div id="mensaje" role="alert"></div>
+  <header class="topbar">
+    <div class="topbar-in">
+      <a class="marca" href="/">
+        <span class="marca-icono" aria-hidden="true">🎓</span>
+        <span>Eventos académicos</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Navegación principal"></nav>
+    </div>
+  </header>
 
-  <div class="filtros">
-    <label>Acción
-      <select id="fAccion"><option value="">Todas</option></select>
-    </label>
-    <label>Fecha
-      <input id="fFecha" type="date">
-    </label>
-    <label>Usuario o detalle
-      <input id="fTexto" type="search" placeholder="Buscar...">
-    </label>
-    <button id="btnLimpiar" type="button">Limpiar filtros</button>
-    <button id="btnActualizar" type="button">Actualizar</button>
-  </div>
+  <main class="contenedor" id="contenido">
+    <h1>Historial de operaciones</h1>
+    <p class="subtitulo">Registro de lo que ocurre en el sistema (solo administrador).</p>
 
-  <div id="contador"></div>
+    <form id="formFiltros" class="filtros" aria-label="Filtrar el historial">
+      <div class="campo">
+        <label for="fAccion">Acción</label>
+        <select id="fAccion" name="fAccion">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="fFecha">Fecha</label>
+        <input id="fFecha" name="fFecha" type="date">
+      </div>
+      <div class="campo">
+        <label for="fTexto">Usuario o detalle</label>
+        <input id="fTexto" name="fTexto" type="search" autocomplete="off">
+      </div>
+      <div class="botones">
+        <button type="button" id="btnLimpiar" class="btn secundario">Limpiar</button>
+        <button type="button" id="btnActualizar" class="btn">Actualizar</button>
+      </div>
+    </form>
 
-  <div class="tabla">
-    <table>
-      <thead>
-        <tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Detalle</th></tr>
-      </thead>
-      <tbody id="filas"></tbody>
-    </table>
-  </div>
+    <div id="mensaje" class="mensaje" role="status" aria-live="polite"></div>
+    <p id="contador" class="contador" aria-live="polite"></p>
 
-  <script>
-    const ETIQUETAS = {
-      EVENTO_CREADO: 'Evento creado',
-      EVENTO_EDITADO: 'Evento editado',
-      EVENTO_PUBLICADO: 'Evento publicado',
-      EVENTO_CERRADO: 'Evento cerrado',
-      EVENTO_FINALIZADO: 'Evento finalizado',
-      EVENTO_CANCELADO: 'Evento cancelado',
-      EVENTO_ELIMINADO: 'Evento eliminado',
-      INSCRIPCION_CREADA: 'Inscripción creada',
-      INSCRIPCION_CANCELADA: 'Inscripción cancelada',
-      ASISTENCIA_REGISTRADA: 'Asistencia registrada',
-      ACCESO_NO_AUTORIZADO: 'Acceso no autorizado'
-    };
+    <div class="tabla">
+      <table>
+        <caption class="sr-only">Operaciones registradas</caption>
+        <thead>
+          <tr>
+            <th scope="col">Fecha</th>
+            <th scope="col">Usuario</th>
+            <th scope="col">Acción</th>
+            <th scope="col">Entidad</th>
+            <th scope="col">ID</th>
+            <th scope="col">Detalle</th>
+          </tr>
+        </thead>
+        <tbody id="filas"></tbody>
+      </table>
+    </div>
+  </main>
 
-    const mensaje = document.getElementById('mensaje');
-    const filas = document.getElementById('filas');
-    const fAccion = document.getElementById('fAccion');
-    const fFecha = document.getElementById('fFecha');
-    const fTexto = document.getElementById('fTexto');
-    let registros = [];
+  <footer class="pie">
+    <p>Proyecto de Fundamentos Web · UNIAJC</p>
+  </footer>
 
-    function etiqueta(codigo) {
-      return ETIQUETAS[codigo] || codigo;
-    }
-
-    function mostrarError(texto, enlace, textoEnlace) {
-      mensaje.replaceChildren(document.createTextNode(texto));
-      if (enlace) {
-        const a = document.createElement('a');
-        a.href = enlace;
-        a.textContent = textoEnlace;
-        mensaje.appendChild(a);
-      }
-      filas.replaceChildren();
-      document.getElementById('contador').textContent = '';
-    }
-
-    function llenarAcciones() {
-      const actual = fAccion.value;
-      fAccion.replaceChildren();
-      const todas = document.createElement('option');
-      todas.value = '';
-      todas.textContent = 'Todas';
-      fAccion.appendChild(todas);
-      [...new Set(registros.map(r => r.accion))].sort().forEach(codigo => {
-        const op = document.createElement('option');
-        op.value = codigo;
-        op.textContent = etiqueta(codigo);
-        fAccion.appendChild(op);
-      });
-      fAccion.value = actual;
-    }
-
-    function pintar() {
-      const texto = fTexto.value.trim().toLowerCase();
-      const visibles = registros.filter(r =>
-        (!fAccion.value || r.accion === fAccion.value)
-        && (!fFecha.value || r.fecha.slice(0, 10) === fFecha.value)
-        && (!texto
-          || (r.usuario || '').toLowerCase().includes(texto)
-          || (r.detalle || '').toLowerCase().includes(texto)));
-
-      filas.replaceChildren();
-      visibles.forEach(r => {
-        const tr = document.createElement('tr');
-        [r.fecha.replace('T', ' ').slice(0, 19), r.usuario, etiqueta(r.accion),
-          r.entidad, r.idEntidad, r.detalle].forEach(v => {
-          const td = document.createElement('td');
-          td.textContent = v == null ? '' : v;
-          tr.appendChild(td);
-        });
-        filas.appendChild(tr);
-      });
-
-      document.getElementById('contador').textContent = registros.length === 0
-        ? 'Todavía no hay operaciones registradas.'
-        : 'Mostrando ' + visibles.length + ' de ' + registros.length + ' operaciones (las 200 más recientes).';
-    }
-
-    async function cargar() {
-      mensaje.textContent = '';
-      let res;
-      try {
-        res = await fetch('/api/auditoria');
-      } catch (e) {
-        mostrarError('No se pudo conectar con el servidor.');
-        return;
-      }
-      const esJson = (res.headers.get('content-type') || '').includes('application/json');
-      if (res.redirected || res.status === 401 || (res.ok && !esJson)) {
-        mostrarError('No has iniciado sesión. ', '/login.html', 'Inicia sesión como administrador');
-        return;
-      }
-      if (res.status === 403) {
-        mostrarError('No tienes permiso para ver el historial (solo el administrador).');
-        return;
-      }
-      if (!res.ok) {
-        mostrarError('No se pudo cargar el historial.');
-        return;
-      }
-      registros = await res.json();
-      llenarAcciones();
-      pintar();
-    }
-
-    [fAccion, fFecha, fTexto].forEach(el => el.addEventListener('input', pintar));
-    document.getElementById('btnLimpiar').addEventListener('click', () => {
-      fAccion.value = '';
-      fFecha.value = '';
-      fTexto.value = '';
-      pintar();
-    });
-    document.getElementById('btnActualizar').addEventListener('click', cargar);
-
-    cargar();
-  </script>
+  <script src="/js/comun.js"></script>
+  <script src="/js/historial.js"></script>
 </body>
 </html>

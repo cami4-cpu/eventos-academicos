@@ -3,319 +3,112 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Panel del organizador</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 1100px; margin: 20px auto; padding: 0 12px; }
-    form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-bottom: 20px; }
-    form input, form select, form textarea, form button { padding: 6px; }
-    form textarea, form button { grid-column: 1 / -1; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 14px; }
-    td button { margin: 2px 4px 2px 0; }
-    #mensaje { margin: 10px 0; font-weight: bold; }
-    .motivo { display: block; font-size: 12px; color: #555; margin-top: 4px; }
-  </style>
+  <meta name="description" content="Crea, edita, publica y cancela tus eventos, revisa los inscritos y registra la asistencia.">
+  <title>Panel del organizador · Eventos académicos UNIAJC</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%93%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <button id="btnSalir" type="button">Cerrar sesión</button>
-  <h1>Panel del organizador</h1>
-  <p><a href="/">Ver catálogo público</a></p>
-  <p><a href="/historial.html">Ver historial de operaciones (solo administrador)</a></p>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
 
-  <h2 id="tituloForm">Crear evento</h2>
-  <form id="formEvento">
-    <input id="titulo" placeholder="Título" required>
-    <select id="categoria" required><option value="">Categoría</option></select>
-    <select id="modalidad" required>
-      <option value="PRESENCIAL">Presencial</option>
-      <option value="VIRTUAL">Virtual</option>
-      <option value="HIBRIDA">Híbrida</option>
-    </select>
-    <input id="fecha" type="date" required>
-    <input id="horaInicio" type="time" required>
-    <input id="horaFin" type="time" required>
-    <input id="ubicacion" placeholder="Ubicación o enlace">
-    <input id="cupo" type="number" min="1" placeholder="Cupo" required>
-    <textarea id="descripcion" placeholder="Descripción"></textarea>
-    <button id="btnGuardar" type="submit">Crear evento</button>
-    <button id="btnCancelarEdicion" type="button" hidden>Cancelar edición</button>
-  </form>
+  <header class="topbar">
+    <div class="topbar-in">
+      <a class="marca" href="/">
+        <span class="marca-icono" aria-hidden="true">🎓</span>
+        <span>Eventos académicos</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Navegación principal"></nav>
+    </div>
+  </header>
 
-  <div id="mensaje"></div>
+  <main class="contenedor" id="contenido">
+    <h1>Panel del organizador</h1>
+    <p class="subtitulo">Gestiona tus eventos, revisa los inscritos y registra la asistencia.</p>
 
-  <h2>Mis eventos</h2>
-  <table>
-    <thead>
-      <tr><th>Título</th><th>Fecha</th><th>Modalidad</th><th>Cupo</th><th>Estado</th><th>Acciones</th></tr>
-    </thead>
-    <tbody id="filas"></tbody>
-  </table>
-  <div id="inscritos"></div>
+    <section class="tarjeta" aria-labelledby="tituloForm">
+      <h2 id="tituloForm" style="margin-top:0">Crear evento</h2>
+      <form id="formEvento">
+        <div class="form-grid">
+          <div class="campo">
+            <label for="titulo">Título</label>
+            <input id="titulo" name="titulo" type="text" maxlength="150" required>
+          </div>
+          <div class="campo">
+            <label for="categoria">Categoría</label>
+            <select id="categoria" name="categoria" required>
+              <option value="">Selecciona una categoría</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="modalidad">Modalidad</label>
+            <select id="modalidad" name="modalidad" required>
+              <option value="PRESENCIAL">Presencial</option>
+              <option value="VIRTUAL">Virtual</option>
+              <option value="HIBRIDA">Híbrida</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="fecha">Fecha</label>
+            <input id="fecha" name="fecha" type="date" required>
+          </div>
+          <div class="campo">
+            <label for="horaInicio">Hora de inicio</label>
+            <input id="horaInicio" name="horaInicio" type="time" required>
+          </div>
+          <div class="campo">
+            <label for="horaFin">Hora de fin</label>
+            <input id="horaFin" name="horaFin" type="time" required>
+          </div>
+          <div class="campo">
+            <label for="ubicacion">Ubicación o enlace</label>
+            <input id="ubicacion" name="ubicacion" type="text" maxlength="200">
+          </div>
+          <div class="campo">
+            <label for="cupo">Cupo</label>
+            <input id="cupo" name="cupo" type="number" min="1" required>
+          </div>
+          <div class="campo completo">
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion" name="descripcion" maxlength="2000"></textarea>
+          </div>
+        </div>
+        <div class="acciones-form">
+          <button type="submit" id="btnGuardar" class="btn">Crear evento</button>
+          <button type="button" id="btnCancelarEdicion" class="btn secundario" hidden>Cancelar edición</button>
+        </div>
+      </form>
+    </section>
 
-  <script>
-    const mensaje = document.getElementById('mensaje');
-    const filas = document.getElementById('filas');
-    const form = document.getElementById('formEvento');
-    const btnGuardar = document.getElementById('btnGuardar');
-    const btnCancelarEdicion = document.getElementById('btnCancelarEdicion');
-    let idEditando = null;
+    <div id="mensaje" class="mensaje" role="status" aria-live="polite"></div>
 
-    function mostrar(texto, esError) {
-      mensaje.textContent = texto;
-      mensaje.style.color = esError ? 'crimson' : 'green';
-    }
+    <section aria-labelledby="tituloEventos">
+      <h2 id="tituloEventos">Mis eventos</h2>
+      <div class="tabla">
+        <table>
+          <caption class="sr-only">Lista de eventos</caption>
+          <thead>
+            <tr>
+              <th scope="col">Título</th>
+              <th scope="col">Fecha</th>
+              <th scope="col">Modalidad</th>
+              <th scope="col">Cupo</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="filas"></tbody>
+        </table>
+      </div>
+    </section>
 
-    async function textoError(res, porDefecto) {
-      try {
-        const d = await res.json();
-        if (d.message) return d.message;
-      } catch (e) { }
-      return porDefecto;
-    }
+    <section id="inscritos" aria-live="polite"></section>
+  </main>
 
-    function boton(texto, accion) {
-      const b = document.createElement('button');
-      b.textContent = texto;
-      b.addEventListener('click', accion);
-      return b;
-    }
+  <footer class="pie">
+    <p>Proyecto de Fundamentos Web · UNIAJC</p>
+  </footer>
 
-    async function marcarAsistencia(idEvento, titulo, idInscripcion, valor) {
-      const res = await fetch('/api/eventos/' + idEvento + '/inscritos/' + idInscripcion
-        + '/asistencia?valor=' + valor, { method: 'PATCH' });
-      if (!res.ok) {
-        mostrar(await textoError(res, 'No se pudo registrar la asistencia.'), true);
-        return;
-      }
-      mostrar('Asistencia registrada.', false);
-      verInscritos(idEvento, titulo);
-    }
-
-    async function verInscritos(id, titulo) {
-      const zona = document.getElementById('inscritos');
-      zona.replaceChildren();
-      const res = await fetch('/api/eventos/' + id + '/inscritos');
-      if (!res.ok) { mostrar('No tienes permiso para ver los inscritos de ese evento.', true); return; }
-      const inscritos = await res.json();
-
-      const encabezado = document.createElement('h2');
-      const activos = inscritos.filter(i => i.estado === 'ACTIVA').length;
-      const asistieron = inscritos.filter(i => i.asistencia === 'ASISTIO').length;
-      encabezado.textContent = 'Inscritos en "' + titulo + '" (' + activos + ' activos, '
-        + asistieron + ' asistieron)';
-      zona.appendChild(encabezado);
-
-      const resInd = await fetch('/api/eventos/' + id + '/inscritos/indicadores');
-      if (resInd.ok) {
-        const ind = await resInd.json();
-        const caja = document.createElement('p');
-        caja.style.background = '#f2f6fc';
-        caja.style.padding = '8px';
-        caja.textContent = 'Cupo: ' + ind.cupo
-          + ' | Inscritos activos: ' + ind.inscritosActivos
-          + ' | Cupos libres: ' + ind.cuposLibres
-          + ' | Ocupación: ' + ind.porcentajeOcupacion + '%'
-          + ' | Asistieron: ' + ind.asistieron
-          + ' | No asistieron: ' + ind.noAsistieron
-          + ' | Pendientes: ' + ind.pendientes
-          + ' | Asistencia: ' + ind.porcentajeAsistencia + '%';
-        zona.appendChild(caja);
-      }
-
-      if (inscritos.length === 0) {
-        zona.appendChild(document.createTextNode('Todavía no hay inscritos.'));
-        return;
-      }
-      const tabla = document.createElement('table');
-      const cabecera = document.createElement('tr');
-      ['Nombre', 'Correo', 'Estado', 'Asistencia', 'Fecha de inscripción', 'Registrar'].forEach(t => {
-        const th = document.createElement('th');
-        th.textContent = t;
-        cabecera.appendChild(th);
-      });
-      tabla.appendChild(cabecera);
-      inscritos.forEach(i => {
-        const tr = document.createElement('tr');
-        [i.nombre, i.email, i.estado, i.asistencia, i.fechaInscripcion.replace('T', ' ').slice(0, 16)].forEach(v => {
-          const td = document.createElement('td');
-          td.textContent = v;
-          tr.appendChild(td);
-        });
-        const acciones = document.createElement('td');
-        if (i.estado === 'ACTIVA') {
-          acciones.append(
-            boton('Asistió', () => marcarAsistencia(id, titulo, i.idInscripcion, 'ASISTIO')),
-            boton('No asistió', () => marcarAsistencia(id, titulo, i.idInscripcion, 'NO_ASISTIO'))
-          );
-        }
-        tr.appendChild(acciones);
-        tabla.appendChild(tr);
-      });
-      zona.appendChild(tabla);
-    }
-
-    document.getElementById('btnSalir').addEventListener('click', async () => {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/login.html';
-    });
-
-    async function cargarCategorias() {
-      const res = await fetch('/api/categorias');
-      const categorias = await res.json();
-      const select = document.getElementById('categoria');
-      categorias.forEach(c => {
-        const op = document.createElement('option');
-        op.value = c.id;
-        op.textContent = c.nombre;
-        select.appendChild(op);
-      });
-    }
-
-    async function cambiarEstado(id, estado) {
-      const res = await fetch('/api/eventos/' + id + '/estado?estado=' + estado, { method: 'PATCH' });
-      if (!res.ok) { mostrar(await textoError(res, 'No se pudo cambiar el estado.'), true); return; }
-      mostrar('Estado actualizado a ' + estado + '.', false);
-      cargarEventos();
-    }
-
-    async function cancelarEvento(e) {
-      const motivo = prompt('Motivo de la cancelación de "' + e.titulo + '":');
-      if (motivo === null) return;
-      if (motivo.trim() === '') {
-        mostrar('Debes escribir un motivo para cancelar el evento.', true);
-        return;
-      }
-      const res = await fetch('/api/eventos/' + e.id + '/cancelar', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ motivo: motivo.trim() })
-      });
-      if (!res.ok) { mostrar(await textoError(res, 'No se pudo cancelar el evento.'), true); return; }
-      mostrar('Evento cancelado. Las inscripciones se conservan como historial.', false);
-      cargarEventos();
-    }
-
-    async function eliminar(id) {
-      if (!confirm('¿Eliminar este evento?')) return;
-      const res = await fetch('/api/eventos/' + id, { method: 'DELETE' });
-      if (!res.ok) { mostrar(await textoError(res, 'No se pudo eliminar el evento.'), true); return; }
-      mostrar('Evento eliminado.', false);
-      cargarEventos();
-    }
-
-    function editar(e) {
-      idEditando = e.id;
-      document.getElementById('titulo').value = e.titulo;
-      document.getElementById('descripcion').value = e.descripcion || '';
-      document.getElementById('fecha').value = e.fecha;
-      document.getElementById('horaInicio').value = (e.horaInicio || '').slice(0, 5);
-      document.getElementById('horaFin').value = (e.horaFin || '').slice(0, 5);
-      document.getElementById('modalidad').value = e.modalidad;
-      document.getElementById('ubicacion').value = e.ubicacion || '';
-      document.getElementById('cupo').value = e.cupo;
-      const opcion = Array.from(document.getElementById('categoria').options)
-        .find(o => o.textContent === e.categoria);
-      document.getElementById('categoria').value = opcion ? opcion.value : '';
-      document.getElementById('tituloForm').textContent = 'Editar evento';
-      btnGuardar.textContent = 'Guardar cambios';
-      btnCancelarEdicion.hidden = false;
-      mostrar('Editando "' + e.titulo + '". Cambia los datos y pulsa Guardar cambios.', false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function salirEdicion() {
-      idEditando = null;
-      form.reset();
-      document.getElementById('tituloForm').textContent = 'Crear evento';
-      btnGuardar.textContent = 'Crear evento';
-      btnCancelarEdicion.hidden = true;
-    }
-
-    btnCancelarEdicion.addEventListener('click', () => {
-      salirEdicion();
-      mostrar('', false);
-    });
-
-    async function cargarEventos() {
-      const res = await fetch('/api/eventos');
-      const eventos = await res.json();
-      filas.replaceChildren();
-      eventos.forEach(e => {
-        const tr = document.createElement('tr');
-        [e.titulo, e.fecha, e.modalidad, e.cupo].forEach(valor => {
-          const td = document.createElement('td');
-          td.textContent = valor;
-          tr.appendChild(td);
-        });
-
-        const tdEstado = document.createElement('td');
-        tdEstado.textContent = e.estado;
-        if (e.estado === 'CANCELADO' && e.motivoCancelacion) {
-          const nota = document.createElement('span');
-          nota.className = 'motivo';
-          const cuando = e.fechaCancelacion ? e.fechaCancelacion.replace('T', ' ').slice(0, 16) : '';
-          nota.textContent = 'Motivo: ' + e.motivoCancelacion + ' (por ' + e.canceladoPor + ', ' + cuando + ')';
-          tdEstado.appendChild(nota);
-        }
-        tr.appendChild(tdEstado);
-
-        const acciones = document.createElement('td');
-        const cerrado = e.estado === 'CANCELADO' || e.estado === 'FINALIZADO';
-        if (!cerrado) {
-          if (e.estado === 'BORRADOR' || e.estado === 'CERRADO') {
-            acciones.append(boton(e.estado === 'CERRADO' ? 'Reabrir' : 'Publicar',
-              () => cambiarEstado(e.id, 'PUBLICADO')));
-          }
-          acciones.append(boton('Editar', () => editar(e)));
-          if (e.estado === 'PUBLICADO') {
-            acciones.append(boton('Cerrar', () => cambiarEstado(e.id, 'CERRADO')));
-          }
-          if (e.estado === 'PUBLICADO' || e.estado === 'CERRADO') {
-            acciones.append(boton('Finalizar', () => cambiarEstado(e.id, 'FINALIZADO')));
-          }
-          acciones.append(boton('Cancelar', () => cancelarEvento(e)));
-        }
-        acciones.append(
-          boton('Ver inscritos', () => verInscritos(e.id, e.titulo)),
-          boton('Eliminar', () => eliminar(e.id))
-        );
-        tr.appendChild(acciones);
-        filas.appendChild(tr);
-      });
-    }
-
-    form.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      const datos = {
-        titulo: document.getElementById('titulo').value,
-        descripcion: document.getElementById('descripcion').value,
-        fecha: document.getElementById('fecha').value,
-        horaInicio: document.getElementById('horaInicio').value,
-        horaFin: document.getElementById('horaFin').value,
-        modalidad: document.getElementById('modalidad').value,
-        ubicacion: document.getElementById('ubicacion').value,
-        cupo: parseInt(document.getElementById('cupo').value, 10),
-        idCategoria: parseInt(document.getElementById('categoria').value, 10)
-      };
-      const editando = idEditando !== null;
-      const res = await fetch(editando ? '/api/eventos/' + idEditando : '/api/eventos', {
-        method: editando ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(datos)
-      });
-      if (!res.ok) {
-        mostrar(await textoError(res, 'No se pudo guardar el evento. Revisa los datos.'), true);
-        return;
-      }
-      mostrar(editando
-        ? 'Evento actualizado.'
-        : 'Evento creado como borrador. Pulsa Publicar para que salga en el catálogo.', false);
-      salirEdicion();
-      cargarEventos();
-    });
-
-    cargarCategorias();
-    cargarEventos();
-  </script>
+  <script src="/js/comun.js"></script>
+  <script src="/js/organizador.js"></script>
 </body>
 </html>

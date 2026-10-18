@@ -3,76 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mis inscripciones</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 0 12px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 14px; }
-    #mensaje { margin: 10px 0; font-weight: bold; }
-  </style>
+  <meta name="description" content="Consulta tus inscripciones activas e históricas y cancela las que ya no necesites.">
+  <title>Mis inscripciones · Eventos académicos UNIAJC</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%93%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <h1>Mis inscripciones</h1>
-  <p><a href="/">Volver al catálogo</a></p>
-  <div id="mensaje"></div>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
 
-  <table>
-    <thead>
-      <tr><th>Evento</th><th>Fecha</th><th>Hora</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr>
-    </thead>
-    <tbody id="filas"></tbody>
-  </table>
+  <header class="topbar">
+    <div class="topbar-in">
+      <a class="marca" href="/">
+        <span class="marca-icono" aria-hidden="true">🎓</span>
+        <span>Eventos académicos</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Navegación principal"></nav>
+    </div>
+  </header>
 
-  <script>
-    const filas = document.getElementById('filas');
-    const mensaje = document.getElementById('mensaje');
+  <main class="contenedor" id="contenido">
+    <h1>Mis inscripciones</h1>
+    <p class="subtitulo">Tus inscripciones activas y el historial de las canceladas.</p>
 
-    function mostrar(texto, esError) {
-      mensaje.textContent = texto;
-      mensaje.style.color = esError ? 'crimson' : 'green';
-    }
+    <div id="mensaje" class="mensaje" role="status" aria-live="polite"></div>
 
-    async function cancelar(idEvento) {
-      if (!confirm('¿Cancelar esta inscripción?')) return;
-      const res = await fetch('/api/inscripciones/' + idEvento, { method: 'DELETE' });
-      if (!res.ok) { mostrar('No se pudo cancelar la inscripción.', true); return; }
-      mostrar('Inscripción cancelada.', false);
-      cargar();
-    }
+    <div class="tabla">
+      <table>
+        <caption class="sr-only">Lista de mis inscripciones</caption>
+        <thead>
+          <tr>
+            <th scope="col">Evento</th>
+            <th scope="col">Fecha</th>
+            <th scope="col">Hora</th>
+            <th scope="col">Lugar</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="filas"></tbody>
+      </table>
+    </div>
+  </main>
 
-    async function cargar() {
-      const res = await fetch('/api/inscripciones/mias');
-      const tipo = res.headers.get('content-type') || '';
-      if (!res.ok || !tipo.includes('json')) {
-        window.location.href = '/login.html';
-        return;
-      }
-      const inscripciones = await res.json();
-      filas.replaceChildren();
-      if (inscripciones.length === 0) {
-        mostrar('Todavía no tienes inscripciones.', false);
-        return;
-      }
-      inscripciones.forEach(i => {
-        const tr = document.createElement('tr');
-        [i.titulo, i.fecha, i.horaInicio.slice(0, 5), i.ubicacion, i.estado].forEach(valor => {
-          const td = document.createElement('td');
-          td.textContent = valor;
-          tr.appendChild(td);
-        });
-        const acciones = document.createElement('td');
-        if (i.estado === 'ACTIVA') {
-          const boton = document.createElement('button');
-          boton.textContent = 'Cancelar';
-          boton.addEventListener('click', () => cancelar(i.idEvento));
-          acciones.appendChild(boton);
-        }
-        tr.appendChild(acciones);
-        filas.appendChild(tr);
-      });
-    }
+  <footer class="pie">
+    <p>Proyecto de Fundamentos Web · UNIAJC</p>
+  </footer>
 
-    cargar();
-  </script>
+  <script src="/js/comun.js"></script>
+  <script src="/js/mis-inscripciones.js"></script>
 </body>
 </html>

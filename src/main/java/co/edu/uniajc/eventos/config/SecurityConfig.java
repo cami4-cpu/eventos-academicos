@@ -20,6 +20,7 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(a -> a
                 .requestMatchers("/", "/index.html", "/login.html", "/registro.html",
+                        "/css/**", "/js/**", "/favicon.ico",
                         "/api/catalogo", "/api/categorias", "/api/auth/registro").permitAll()
                 .requestMatchers("/organizador.html", "/api/eventos/**")
                         .hasAnyRole("ORGANIZADOR", "ADMINISTRADOR")
